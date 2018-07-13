@@ -28,20 +28,26 @@
 
 */
 
-function MADataTable(options) 
-{
+function MADataTable(options) {
     this.options = options;
     this.GenerateHeaders();
     this.GetData();
 }
 
-MADataTable.prototype.GenerateHeaders = function()
-{
-    console.log('Generate Table Headers');
+MADataTable.prototype.GenerateHeaders = function() {
+    //console.log('Generate Table Headers');
     
     var TableHeadersHTML = '<thead><tr class="slds-line-height_reset">';
-    for (var i=0; i < this.options.columns.length; i++)
-    {
+    var allowResizing = false;
+    var sldsresize = '';
+    if(this.GetObjProperty(this.options,'allowResizing') != undefined) {
+        allowResizing = this.options.allowResizing;
+        if(allowResizing) {
+            sldsresize = 'slds-is-resizable ';
+        }
+    }
+
+    for (var i=0; i < this.options.columns.length; i++) {
         var title = "", label = "";
         if(typeof(this.options.columns[i].label) == "function") {
             label = this.options.columns[i].label()
@@ -51,7 +57,7 @@ MADataTable.prototype.GenerateHeaders = function()
             label = this.options.columns[i].label;
         }
 
-        TableHeadersHTML += '<th class="slds-is-sortable slds-is-resizable slds-text-title_caps" scope="col"'
+        TableHeadersHTML += '<th class="slds-is-sortable ' + sldsresize + 'slds-text-title_caps" scope="col"'
                             + ' sortable="' + (this.options.columns[i].sortable) + '"'
                             + ' sortAs="' + (this.options.columns[i].sortAs ? this.options.columns[i].sortAs : 'string') + '"'
                             + ' >'
@@ -66,15 +72,18 @@ MADataTable.prototype.GenerateHeaders = function()
                                         + '</svg>'
                                     + '</span>'
                                     + '<span class="slds-assistive-text" aria-live="assertive" aria-atomic="true"></span>'
-                                + '</a>'
-                                + '<div class="slds-resizable">'
+                                + '</a>';
+        if (allowResizing) {
+            TableHeadersHTML += '<div class="slds-resizable">'
                                     + '<label for="cell-resize-handle-' + i + '" class="slds-assistive-text">Column width</label>'
                                     + '<input type="range" min="20" max="1000" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-' + i + '" tabindex="0"/>'
                                     + '<span class="slds-resizable__handle">'
                                         + '<span class="slds-resizable__divider"></span>'
                                     + '</span>'
-                                + '</div>'
-                            + '</th>';
+                            + '</div>';
+        }
+
+        TableHeadersHTML += '</th>';
 
 /*<th class="slds-is-sortable slds-is-resizable slds-text-title_caps" scope="col" sortable="true" sortas="string" style="position: relative; width: 234px;" sort-order="ascending">
 <span class="slds-truncate" title="Error Name">Error Name</span>
@@ -95,53 +104,45 @@ MADataTable.prototype.GenerateHeaders = function()
 
     //make columns clickable for sorting
     (function (obj) {
-        console.log(obj);
+        //console.log(obj);
         
         $(obj.options.tableSelector).find('th').click(function(){
             
-            console.log( $(this).index() );
-            console.log( $(this).attr('sortable') );
-
-            var ascending = true;
             var sortAs = 'string';
+            var ascending = !isValueEmpty(obj.options.selectedSortOrder) ? (obj.options.selectedSortOrder == 'ascending' ? false : true) : true;
             
-            if ($(this).attr('sort-order') == 'ascending')
-            {
-                console.log('sort order is ascending');
-                ascending = false;
+            if(obj.GetObjProperty(obj.options,'refresh') != undefined && obj.options.refresh) {
+                ascending = (obj.options.selectedSortOrder == 'ascending') ? true : false;
+                //ascending = !isValueEmpty(obj.options.selectedSortOrder) ? (obj.options.selectedSortOrder == 'ascending' ? true : false) : true;
             }
             
-            if ($(this).attr('sortas') == 'number')
-            {
+            if ($(this).attr('sortas') == 'number') {
                 sortAs = 'number';
             }
             
-            if ($(this).attr('sortable') == 'true')
-            {
-                console.log('sortable');
+            if ($(this).attr('sortable') == 'true') {
             
+            //console.log('sortable');
+            //console.log('nth: '+ parseInt($(this).index()));
                 
                 $( obj.options.tableSelector + ' tr td:nth-child(' + (parseInt($(this).index()) + 1)  +  ')').sortElements(function(a, b){
                     
                     var aValue = $(a).attr('sortable-value');
                     var bValue = $(b).attr('sortable-value');
                     
-                    if (sortAs == 'number')
-                    {
-                        console.log('sort as number');
+                    if (sortAs == 'number') {
+                        //console.log('sort as number');
                         aValue = parseInt(aValue);
                         bValue = parseInt(bValue);
                     }
                     
-                    console.log(aValue);
-                    console.log(bValue);
+                    //console.log(aValue);
+                    //console.log(bValue);
                     
-                    if (ascending)
-                    {
+                    if (ascending) {
                         return aValue > bValue ? 1 : -1;
                     }
-                    else
-                    {
+                    else {
                         return aValue > bValue ? -1 : 1;
                     }
                     
@@ -155,6 +156,9 @@ MADataTable.prototype.GenerateHeaders = function()
                 
                 //store order back on record
                 $(this).attr('sort-order', (ascending) ? 'ascending' : 'decending');
+                obj.options.selectedSortOrder = (ascending) ? 'ascending' : 'decending';
+                //obj.options.defaultSortIndex = parseInt($(this).index());
+                obj.options.selectedSortIndex = parseInt($(this).index());
             }
             
             
@@ -162,7 +166,9 @@ MADataTable.prototype.GenerateHeaders = function()
         
     })(this);
 
-    (function () {
+    // make columns re-sizable
+    if (allowResizing) {
+    // (function () {
         var thElm;
         var startOffset;
 
@@ -181,7 +187,7 @@ MADataTable.prototype.GenerateHeaders = function()
                 grip.style.position = 'absolute';
                 grip.style.cursor = 'col-resize';*/
                 grip.addEventListener('mousedown', function (e) {
-                    console.log('mousedown event: ' + e)
+                    //console.log('mousedown event: ' + e)
                     thElm = th;
                     startOffset = th.offsetWidth - e.pageX;
                 });
@@ -195,7 +201,7 @@ MADataTable.prototype.GenerateHeaders = function()
             });
 
         document.addEventListener('mousemove', function (e) {
-            console.log('mousemove event: ' + e)
+            //console.log('mousemove event: ' + e)
             if (thElm) {
                 thElm.style.width = startOffset + e.pageX + 'px';
             }
@@ -204,7 +210,8 @@ MADataTable.prototype.GenerateHeaders = function()
         document.addEventListener('mouseup', function () {
             thElm = undefined;
         });
-    })();
+    // })();
+    }
     
 };
 
@@ -241,18 +248,15 @@ MADataTable.prototype.setNewWidth = function(component, event, helper) {
     }*/
 
 
-MADataTable.prototype.GetObjProperty = function(obj, prop)
-{
+MADataTable.prototype.GetObjProperty = function(obj, prop) {
     prop = prop || '';
     var arr = prop.split(".");
     while(arr.length && (obj = obj[arr.shift()]));
     return obj;
 };
 
-MADataTable.prototype.GetData = function()
-{
-    if (this.GetObjProperty(this.options,'events.loading') != undefined)
-    {
+MADataTable.prototype.GetData = function() {
+    if (this.GetObjProperty(this.options,'events.loading') != undefined) {
         this.options.events.loading();
     }
     
@@ -260,6 +264,7 @@ MADataTable.prototype.GetData = function()
     //need closure since this is an ajax call
     (function (obj) {
 
+        //console.log('>>>obj: ' + obj);
         // var params = obj.options.remoteFunction.params || {};
         if (obj.GetObjProperty(obj.options,'remoteFunction.params') != undefined) {
             Visualforce.remoting.Manager.invokeAction(
@@ -279,17 +284,16 @@ MADataTable.prototype.GetData = function()
 
         function handleResults(result, event) {
 
-                console.log('>>> event.status: ' + event.status);
-                console.log('>>> event.message: ' + event.message);
-                console.log('>>> event.type: ' + event.type);
-                console.log('>>> event.where: ' + event.where);
+                //console.log('>>> event.status: ' + event.status);
+                //console.log('>>> event.message: ' + event.message);
+                //console.log('>>> event.type: ' + event.type);
+                //console.log('>>> event.where: ' + event.where);
+                //console.log(result);
                 
                 
-                if (event.status)
-                {
+                if (event.status) {
 
-                    if (obj.GetObjProperty(obj.options,'events.loadingComplete') != undefined)
-                    {
+                    if (obj.GetObjProperty(obj.options,'events.loadingComplete') != undefined) {
                         obj.options.events.loadingComplete(result);
                     }
 
@@ -297,8 +301,7 @@ MADataTable.prototype.GetData = function()
                         result = JSON.parse(result);
                     }
                     catch(e) {
-                        if (obj.GetObjProperty(obj.options,'events.loadingError') != undefined)
-                        {
+                        if (obj.GetObjProperty(obj.options,'events.loadingError') != undefined) {
                             if (result.hasOwnProperty('success') && result.success) {
                                 // response already correctly parsed. Do nothing
                             }
@@ -308,51 +311,78 @@ MADataTable.prototype.GetData = function()
                         }
                     }
                     
-                    //loop over arrayProperty
                     var TableDataHTML = '<tbody>';
+                    var separators = [];
+                    var separateTable = obj.GetObjProperty(obj.options,'separateTable') != undefined;
+                    var separateBy;
                     
-                    for (var index=0; index < result[obj.options.remoteFunction.arrayProperty].length; index++)
-                    {
+                    if (separateTable) {
+                        if(obj.GetObjProperty(obj.options.separateTable, 'separateBy') != undefined) {
+                            separateBy = obj.GetObjProperty(obj.options.separateTable, 'separateBy');
+                            if(obj.GetObjProperty(obj.options.separateTable, 'sortBy') != undefined) {
+                                result[obj.options.remoteFunction.arrayProperty] = 
+                                    objSort(result[obj.options.remoteFunction.arrayProperty], 
+                                        obj.GetObjProperty(obj.options.separateTable, 'separateBy'), 
+                                        obj.GetObjProperty(obj.options.separateTable, 'sortBy'), 
+                                        true);
+                            }
+                        }
+                    }
+                    
+                    //loop over arrayProperty
+                    for (var index=0; index < result[obj.options.remoteFunction.arrayProperty].length; index++) {
+
+                        if (separateTable) {
+                            if (separateBy != null) {
+                                var separatorValue = obj.GetObjProperty(result[obj.options.remoteFunction.arrayProperty][index], separateBy);
+                                if (!separators.includes(separatorValue)) {
+                                    TableDataHTML += '<tr class="header-row">';
+                                    if (typeof(obj.options.separateTable.formatAs) == "function") {
+                                        TableDataHTML += obj.options.separateTable.formatAs(result[obj.options.remoteFunction.arrayProperty][index]);
+                                    }
+                                    TableDataHTML += '</tr>';
+                                    separators.push(separatorValue);
+                                }
+                            }
+                        }
                         TableDataHTML += '<tr class="slds-hint-parent">';
                         
                         //loop over table cols
-                        for (var i=0; i < obj.options.columns.length; i++)
-                        {
+                        for (var i=0; i < obj.options.columns.length; i++) {
                             
-                            console.log(result[obj.options.remoteFunction.arrayProperty][index]);
+                            //console.log(result[obj.options.remoteFunction.arrayProperty][index]);
                             
                             
                             var RulePropertyValue = '';
                             var RulePropertySortValue = '';
                             
                             
-                            if (obj.options.columns[i].property)
-                            {
-                                console.log('has property');
+                            if (obj.options.columns[i].property) {
+                                //console.log('has property');
+                                if (typeof(obj.options.columns[i].property) == "function") {
+                                    RulePropertyValue = obj.options.columns[i].property(result[obj.options.remoteFunction.arrayProperty][index]);
+                                    RulePropertySortValue = RulePropertyValue;
+                                }
+                                else {
                                 
                                 RulePropertyValue = obj.GetObjProperty(result[obj.options.remoteFunction.arrayProperty][index], obj.options.columns[i].property);
                                 RulePropertySortValue = RulePropertyValue;
+                                }
                                 
-                                if (RulePropertyValue == undefined)
-                                {
+                                if (RulePropertyValue == undefined) {
                                     RulePropertyValue = '';
                                     RulePropertySortValue = '';
                                 }
-                                else
-                                {
-                                    if (obj.GetObjProperty(obj.options.columns[i],'formatAs') == undefined)
-                                    {
+                                else {
+                                    if (obj.GetObjProperty(obj.options.columns[i],'formatAs') == undefined) {
                                         //place holder for later
                                     }
                                     
-                                    else
-                                    {
-                                        if (typeof(obj.options.columns[i].formatAs) == "function")
-                                        {
+                                    else {
+                                        if (typeof(obj.options.columns[i].formatAs) == "function") {
                                             RulePropertyValue = obj.options.columns[i].formatAs(result[obj.options.remoteFunction.arrayProperty][index]);
                                         }
-                                        else if (obj.options.columns[i].formatAs == 'date')
-                                        {
+                                        else if (obj.options.columns[i].formatAs == 'date') {
                                             if (isNaN(RulePropertyValue)) {
                                                 RulePropertyValue = '';
                                                 RulePropertySortValue = '1';
@@ -368,19 +398,28 @@ MADataTable.prototype.GetData = function()
                                     
                                 }
                             }
-                            else
-                            {
-                                console.log('missing property');
+                            else {
+                                //console.log('missing property');
                                 
-                                if (typeof(obj.options.columns[i].formatAs) == "function")
-                                {
+                                if (typeof(obj.options.columns[i].formatAs) == "function") {
                                     RulePropertyValue = obj.options.columns[i].formatAs(result[obj.options.remoteFunction.arrayProperty][index]);
+                                    if(!/<[a-z][\s\S]*>/i.test(RulePropertyValue)) {
+                                        RulePropertySortValue = RulePropertyValue;
+                                    }
                                 }
                             }
                             
-                            TableDataHTML += '<td role="gridcell" sortable-value="' + RulePropertySortValue + '">';
+                            TableDataHTML += '<td role="gridcell" sortable-value="' + RulePropertySortValue;
+                            if (obj.GetObjProperty(obj.options.columns[i],'addtlTdStyle') != undefined) {
+                                TableDataHTML += '" class="' + obj.GetObjProperty(obj.options.columns[i],'addtlTdStyle');
+                            }
+                            TableDataHTML += '">';
                             TableDataHTML += '<div';
-                            if(!/errors/i.test(obj.options.columns[i].label) && !/actions/i.test(obj.options.columns[i].label) && !/resolved/i.test(obj.options.columns[i].label)) { //truncating the errors messes up the CSS for the badges and dropdowns
+                            if (obj.GetObjProperty(obj.options.columns[i],'trunc') != undefined && obj.GetObjProperty(obj.options.columns[i],'trunc') == false) {
+                                // do not truncate
+                            }
+                            else {
+                            // if(!/errors/i.test(obj.options.columns[i].label) && !/actions/i.test(obj.options.columns[i].label) && !/resolved/i.test(obj.options.columns[i].label)) { //truncating the errors messes up the CSS for the badges and dropdowns
                                 TableDataHTML += ' class="slds-truncate"';
                             }
                             
@@ -400,21 +439,25 @@ MADataTable.prototype.GetData = function()
 
                     $(obj.options.tableSelector).append(TableDataHTML);
                     
-                    if (obj.options.defaultSortIndex)
-                    {
+                    if (obj.options.selectedSortIndex) {
+                        $(obj.options.tableSelector + ' tr th:nth-child(' + (obj.options.defaultSortIndex + obj.options.selectedSortIndex) + ')').trigger( "click" );
+                        //obj.options.selectedSortIndex = null;
+                    }
+                    else if (obj.GetObjProperty(obj.options,'customSort') == undefined || obj.GetObjProperty(obj.options,'customSort') === false) {
                         $(obj.options.tableSelector + ' tr th:nth-child(' + (obj.options.defaultSortIndex + 1) + ')').trigger( "click" );
+                        //obj.options.selectedSortIndex = null;
                     }
 
-                    if (obj.GetObjProperty(obj.options,'events.tableCreated') != undefined)
-                    {
+                    if (obj.GetObjProperty(obj.options,'events.tableCreated') != undefined) {
                         obj.options.events.tableCreated();
                     }
                     
+                    if(obj.GetObjProperty(obj.options,'refresh') != undefined) {
+                        obj.options.refresh = null;
                 }
-                else
-                {
-                    if (obj.GetObjProperty(obj.options,'events.loadingError') != undefined)
-                    {
+                }
+                else {
+                    if (obj.GetObjProperty(obj.options,'events.loadingError') != undefined) {
                         obj.options.events.loadingError(result, event);
                     }
                 } //end if (event.status)
@@ -426,9 +469,9 @@ MADataTable.prototype.GetData = function()
    
 };
 
-MADataTable.prototype.RefreshData = function()
-{
+MADataTable.prototype.RefreshData = function() {
     $(this.options.tableSelector).find('tbody').html('');
+    this.options['refresh'] = true;
     this.GetData();
 };
 
